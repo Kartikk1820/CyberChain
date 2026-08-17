@@ -1,4 +1,4 @@
-# SIXSYNC — Decentralized Cyber Defense & Trust Network
+# CyberChain — Blockchain-Based Cybersecurity Solution
 
 A prototype platform where organizations (banks, hospitals, CERTs, universities, companies) jointly build a trustworthy, tamper-evident threat intelligence network and feed it into a Zero-Trust access-control engine.
 
