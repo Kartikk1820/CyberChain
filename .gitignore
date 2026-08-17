@@ -1,0 +1,11 @@
+node_modules/
+dist/
+build/
+.env
+*.log
+.DS_Store
+ledger-data/
+packages/*/dist/
+backend/dist/
+ledger/dist/
+frontend/dist/

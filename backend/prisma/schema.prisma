@@ -1,0 +1,212 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum OrgType {
+  BANK
+  HOSPITAL
+  COMPANY
+  GOVERNMENT
+  UNIVERSITY
+  CERT
+}
+
+enum IndicatorType {
+  IP
+  DOMAIN
+  HASH
+  URL
+}
+
+enum ReportStatus {
+  REPORTED
+  CONFIRMED
+  CRITICAL
+  DISPUTED
+}
+
+enum ConfirmationType {
+  CONFIRM
+  DISPUTE
+}
+
+enum AccessDecision {
+  ALLOW
+  MFA
+  RESTRICT
+  BLOCK
+}
+
+model Organization {
+  id             String   @id @default(uuid())
+  name           String
+  type           OrgType
+  did            String   @unique
+  publicKey      String   @unique
+  reputation     Float    @default(100)
+  reportsCount   Int      @default(0)
+  confirmedCount Int      @default(0)
+  disputedCount  Int      @default(0)
+  accuracyPct    Float    @default(0)
+  createdAt      DateTime @default(now())
+
+  keyPair        KeyPair?
+  user           User?
+  reports        ThreatReport[]  @relation("Reporter")
+  confirmations  Confirmation[]
+  accessAttempts AccessAttempt[]
+  securityPolicy SecurityPolicy?
+  campaignOrgs   CampaignOrg[]
+
+  @@index([reputation])
+}
+
+model User {
+  id             String   @id @default(uuid())
+  organizationId String   @unique
+  email          String   @unique
+  passwordHash   String
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model KeyPair {
+  id                  String   @id @default(uuid())
+  organizationId      String   @unique
+  publicKey           String
+  encryptedPrivateKey String?
+  generationMode      String   @default("client")
+  createdAt           DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}
+
+model EvidenceFile {
+  id             String   @id @default(uuid())
+  threatReportId String   @unique
+  originalHash   String
+  currentBytes   Bytes
+  createdAt      DateTime @default(now())
+
+  threatReport ThreatReport @relation(fields: [threatReportId], references: [id])
+}
+
+model ThreatReport {
+  id                String        @id @default(uuid())
+  reporterOrgId     String
+  indicator         String
+  indicatorType     IndicatorType
+  attackType        String
+  mitreTechnique    String
+  severity          String
+  description       String
+  evidenceFileHash  String?
+  digitalSignature  String
+  aiConfidence      Float
+  status            ReportStatus  @default(REPORTED)
+  blockchainBlockId Int?
+  payloadHash       String
+  createdAt         DateTime      @default(now())
+
+  reporter           Organization        @relation("Reporter", fields: [reporterOrgId], references: [id])
+  evidence            EvidenceFile?
+  confirmations        Confirmation[]
+  confidenceScore     ThreatConfidenceScore?
+  campaignIndicators CampaignIndicator[]
+
+  @@index([indicator])
+  @@index([mitreTechnique])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Confirmation {
+  id              String           @id @default(uuid())
+  threatReportId  String
+  confirmingOrgId String
+  type            ConfirmationType
+  evidenceNote    String?
+  createdAt       DateTime         @default(now())
+
+  threatReport  ThreatReport @relation(fields: [threatReportId], references: [id])
+  confirmingOrg Organization @relation(fields: [confirmingOrgId], references: [id])
+
+  @@unique([threatReportId, confirmingOrgId])
+  @@index([threatReportId])
+}
+
+model ThreatConfidenceScore {
+  threatReportId String   @id
+  score          Float
+  lastComputedAt DateTime @updatedAt
+
+  threatReport ThreatReport @relation(fields: [threatReportId], references: [id])
+}
+
+model Campaign {
+  id               String   @id @default(uuid())
+  name             String
+  commonTechniques String[]
+  confidence       Float
+  detectedAt       DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  indicators CampaignIndicator[]
+  orgs       CampaignOrg[]
+}
+
+model CampaignIndicator {
+  campaignId     String
+  threatReportId String
+
+  campaign     Campaign     @relation(fields: [campaignId], references: [id])
+  threatReport ThreatReport @relation(fields: [threatReportId], references: [id])
+
+  @@id([campaignId, threatReportId])
+}
+
+model CampaignOrg {
+  campaignId     String
+  organizationId String
+
+  campaign     Campaign     @relation(fields: [campaignId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@id([campaignId, organizationId])
+}
+
+model AccessAttempt {
+  id                String         @id @default(uuid())
+  user              String
+  organizationId    String
+  ip                String
+  deviceFingerprint String
+  passwordValid     Boolean
+  identityRisk      Float
+  deviceRisk        Float
+  locationRisk      Float
+  ipThreatRisk      Float
+  behaviorRisk      Float
+  totalRiskScore    Float
+  decision          AccessDecision
+  policyApplied     String?
+  createdAt         DateTime       @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, createdAt])
+}
+
+model SecurityPolicy {
+  organizationId String   @id
+  rules          Json
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+}

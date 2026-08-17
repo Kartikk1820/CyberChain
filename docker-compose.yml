@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sixsync}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sixsync_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-sixsync}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sixsync} -d ${POSTGRES_DB:-sixsync}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  ledger:
+    build:
+      context: .
+      dockerfile: ledger/Dockerfile
+    environment:
+      LEDGER_PORT: 4100
+      LEDGER_DEBUG_ENDPOINTS: ${LEDGER_DEBUG_ENDPOINTS:-true}
+    volumes:
+      - ledger_data:/app/ledger/data
+    ports:
+      - "${LEDGER_HOST_PORT:-4100}:4100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4100/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://sixsync:sixsync_dev_password@postgres:5432/sixsync}
+      LEDGER_URL: http://ledger:4100
+      BACKEND_PORT: 4000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ledger:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_HOST_PORT:-4000}:4000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000}
+        VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:4000/ws}
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_HOST_PORT:-3000}:80"
+
+volumes:
+  pg_data:
+  ledger_data:
