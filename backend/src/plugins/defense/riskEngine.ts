@@ -1,5 +1,6 @@
 import { prisma } from "../../db/prisma";
 import type { RiskBreakdown } from "@sixsync/shared";
+import { checkIp } from "../intel/abuseIpdbClient";
 
 const WEIGHTS = {
   identity: 0.2,
@@ -61,7 +62,18 @@ async function computeIpThreatRisk(ip: string): Promise<number> {
     include: { confidenceScore: true },
     orderBy: { confidenceScore: { score: "desc" } },
   });
-  return report?.confidenceScore?.score ?? 0;
+  if (report?.confidenceScore?.score) return report.confidenceScore.score;
+
+  // No internal confirmed report for this IP yet — fall back to a live AbuseIPDB
+  // check so a never-before-seen but known-malicious IP still scores as risky.
+  // checkIp() is already gated/cached/timeout-safe and never throws; the try/catch
+  // here is defense-in-depth only, so this path never degrades below returning 0.
+  try {
+    const external = await checkIp(ip);
+    return external?.abuseScore ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 async function computeBehaviorRisk(organizationId: string, user: string): Promise<number> {

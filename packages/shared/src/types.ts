@@ -19,6 +19,26 @@ export interface Organization {
   createdAt: string;
 }
 
+export interface ScoreBreakdown {
+  reporterReputation: number;
+  evidenceScore: number;
+  aiConfidence: number;
+  freshness: number;
+  confirmationScore: number;
+  disputePenalty: number;
+  weights: { reputation: number; evidence: number; aiConfidence: number; confirmation: number; freshness: number };
+}
+
+export interface ConfirmationWithOrg {
+  id: string;
+  type: ConfirmationType;
+  evidenceNote: string | null;
+  createdAt: string;
+  confirmingOrgId: string;
+  confirmingOrgName: string;
+  confirmingOrgReputation: number;
+}
+
 export interface ThreatReport {
   id: string;
   reporterOrgId: string;
@@ -40,6 +60,14 @@ export interface ThreatReport {
   blockchainVerified?: boolean;
   signatureValid?: boolean;
   evidenceIntegrity?: boolean;
+  resolvedIp?: string | null;
+  geoLat?: number | null;
+  geoLon?: number | null;
+  geoCountry?: string | null;
+  geoCity?: string | null;
+  abuseScore?: number | null;
+  scoreBreakdown?: ScoreBreakdown;
+  confirmations?: ConfirmationWithOrg[];
 }
 
 export interface Confirmation {
@@ -60,6 +88,31 @@ export interface Campaign {
   updatedAt: string;
   indicatorCount?: number;
   orgCount?: number;
+}
+
+export interface CampaignIndicatorSummary {
+  id: string;
+  indicator: string;
+  indicatorType: IndicatorType;
+  attackType: string;
+  mitreTechnique: string;
+  severity: Severity;
+  status: ReportStatus;
+  confidence: number;
+  reporterOrgName: string;
+  createdAt: string;
+}
+
+export interface CampaignOrgSummary {
+  id: string;
+  name: string;
+  type: OrgType;
+  reputation: number;
+}
+
+export interface CampaignDetail extends Campaign {
+  indicators: CampaignIndicatorSummary[];
+  orgs: CampaignOrgSummary[];
 }
 
 export interface RiskBreakdown {

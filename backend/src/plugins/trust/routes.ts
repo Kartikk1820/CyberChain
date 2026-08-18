@@ -11,7 +11,8 @@ import { canonicalReportPayload, type IndicatorType, type OrgType, type Signable
 import type { Organization } from "@prisma/client";
 import { classify } from "../intel/classifier";
 import { enrichClassification } from "../intel/llmEnrichment";
-import { computeAndPersistConfidence } from "../intel/confidence.service";
+import { enrichIndicatorWithIp, type IpIntelResult } from "../intel/ipIntel.service";
+import { computeAndPersistConfidence, previewConfidence } from "../intel/confidence.service";
 
 function serializeOrg(org: Organization) {
   return {
@@ -128,6 +129,22 @@ export async function registerTrustRoutes(app: FastifyInstance) {
         ruleBasedResult
       );
 
+      let ipIntel: IpIntelResult;
+      try {
+        ipIntel = await enrichIndicatorWithIp(indicator, indicatorType as IndicatorType);
+      } catch {
+        ipIntel = { resolvedIp: null, geoLat: null, geoLon: null, geoCountry: null, geoCity: null, abuseScore: null };
+      }
+
+      let finalConfidence = aiConfidence;
+      let finalSeverity = severity;
+      if (ipIntel.abuseScore !== null) {
+        finalConfidence = Math.max(0, Math.min(100, Math.round((aiConfidence + ipIntel.abuseScore) / 2)));
+        if (ipIntel.abuseScore >= 90 && (severity === "low" || severity === "medium")) {
+          finalSeverity = "high";
+        }
+      }
+
       const report = await prisma.$transaction(async (tx) => {
         const created = await tx.threatReport.create({
           data: {
@@ -136,12 +153,18 @@ export async function registerTrustRoutes(app: FastifyInstance) {
             indicatorType: indicatorType as IndicatorType,
             attackType,
             mitreTechnique,
-            severity,
+            severity: finalSeverity,
             description,
             evidenceFileHash,
             digitalSignature,
-            aiConfidence,
+            aiConfidence: finalConfidence,
             payloadHash,
+            resolvedIp: ipIntel.resolvedIp,
+            geoLat: ipIntel.geoLat,
+            geoLon: ipIntel.geoLon,
+            geoCountry: ipIntel.geoCountry,
+            geoCity: ipIntel.geoCity,
+            abuseScore: ipIntel.abuseScore,
           },
         });
 
@@ -202,6 +225,12 @@ export async function registerTrustRoutes(app: FastifyInstance) {
           createdAt: updated.createdAt.toISOString(),
           reporter: serializeOrg(updated.reporter),
           confidenceScore: confidence.score,
+          resolvedIp: updated.resolvedIp,
+          geoLat: updated.geoLat,
+          geoLon: updated.geoLon,
+          geoCountry: updated.geoCountry,
+          geoCity: updated.geoCity,
+          abuseScore: updated.abuseScore,
         },
       });
 
@@ -226,7 +255,7 @@ export async function registerTrustRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>("/reports/:id", async (req, reply) => {
     const report = await prisma.threatReport.findUnique({
       where: { id: req.params.id },
-      include: { reporter: true, confidenceScore: true, evidence: true, confirmations: true },
+      include: { reporter: true, confidenceScore: true, evidence: true, confirmations: { include: { confirmingOrg: true } } },
     });
     if (!report) return reply.code(404).send({ error: "report not found" });
 
@@ -242,7 +271,26 @@ export async function registerTrustRoutes(app: FastifyInstance) {
       blockchainVerified = !!block && block.payload_hash === report.payloadHash;
     }
 
-    return { ...report, confidenceScore: report.confidenceScore?.score ?? 0, evidenceIntegrity, blockchainVerified };
+    const { breakdown: scoreBreakdown } = await previewConfidence(report.id);
+
+    return {
+      ...report,
+      confidenceScore: report.confidenceScore?.score ?? 0,
+      evidenceIntegrity,
+      blockchainVerified,
+      scoreBreakdown,
+      confirmations: report.confirmations
+        .map((c) => ({
+          id: c.id,
+          type: c.type,
+          evidenceNote: c.evidenceNote,
+          createdAt: c.createdAt.toISOString(),
+          confirmingOrgId: c.confirmingOrgId,
+          confirmingOrgName: c.confirmingOrg.name,
+          confirmingOrgReputation: c.confirmingOrg.reputation,
+        }))
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+    };
   });
 
   app.post<{ Params: { id: string } }>("/reports/:id/simulate-tampering", { preHandler: authenticate }, async (req, reply) => {

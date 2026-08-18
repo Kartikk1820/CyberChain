@@ -10,7 +10,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
-    "test": "node --import tsx --test src/test/*.test.ts"
+    "test": "node --import tsx --test src/test/*.test.ts",
+    "seed:bulk": "ts-node --transpile-only prisma/seedBulk.ts"
   },
   "dependencies": {
     "@sixsync/shared": "*",

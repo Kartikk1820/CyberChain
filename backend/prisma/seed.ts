@@ -29,6 +29,15 @@ async function createOrg(name: string, type: OrgType, email: string): Promise<Se
   return { orgId: org.id, publicKey, secretKey: kp.secretKey };
 }
 
+interface DemoGeo {
+  resolvedIp: string;
+  geoLat: number;
+  geoLon: number;
+  geoCountry: string;
+  geoCity: string;
+  abuseScore: number;
+}
+
 interface ReportInput {
   actor: SeedActor;
   indicator: string;
@@ -38,10 +47,11 @@ interface ReportInput {
   description: string;
   evidenceBytes?: Buffer;
   ageHoursAgo?: number;
+  geo?: DemoGeo;
 }
 
 async function createSignedReport(input: ReportInput): Promise<string> {
-  const { actor, indicator, indicatorType, mitreTechnique, severity, description, evidenceBytes } = input;
+  const { actor, indicator, indicatorType, mitreTechnique, severity, description, evidenceBytes, geo } = input;
   const evidenceFileHash = evidenceBytes ? sha256Hex(evidenceBytes) : null;
   const timestamp = new Date().toISOString();
 
@@ -75,6 +85,12 @@ async function createSignedReport(input: ReportInput): Promise<string> {
       digitalSignature,
       aiConfidence: classification.aiConfidence,
       payloadHash,
+      resolvedIp: geo?.resolvedIp,
+      geoLat: geo?.geoLat,
+      geoLon: geo?.geoLon,
+      geoCountry: geo?.geoCountry,
+      geoCity: geo?.geoCity,
+      abuseScore: geo?.abuseScore,
     },
   });
 
@@ -130,6 +146,14 @@ async function main() {
     description:
       "Phishing infrastructure observed serving credential-harvesting pages impersonating our online banking login. Multiple customer reports of suspicious emails linking to this IP.",
     ageHoursAgo: 20,
+    geo: {
+      resolvedIp: "198.51.100.42",
+      geoLat: 55.7558,
+      geoLon: 37.6173,
+      geoCountry: "RU",
+      geoCity: "Moscow",
+      abuseScore: 92,
+    },
   });
   await confirm(hospitalB, phishingIp, "CONFIRM", "Same infrastructure seen targeting our patient portal logins.");
   await confirm(certC, phishingIp, "CONFIRM", "Corroborated via passive DNS and threat intel partners.");
@@ -144,6 +168,14 @@ async function main() {
     description:
       "Domain hosting a near-identical clone of our patient portal login page, registered days ago, resolving to infrastructure shared with other reported phishing indicators.",
     ageHoursAgo: 14,
+    geo: {
+      resolvedIp: "198.51.100.50",
+      geoLat: 55.7558,
+      geoLon: 37.6173,
+      geoCountry: "RU",
+      geoCity: "Moscow",
+      abuseScore: 88,
+    },
   });
   await confirm(certC, phishingDomain, "CONFIRM", "Registrar and hosting overlap with the Bank A IP report.");
   await confirm(bankA, phishingDomain, "CONFIRM", "Matches phishing kit fingerprint seen in our own incident.");
@@ -163,6 +195,14 @@ async function main() {
       "Third piece of infrastructure in the same coordinated phishing campaign, sharing TLS certificate fingerprints with previously reported indicators. High confidence this is part of an organized operation.",
     evidenceBytes: thirdIndicatorEvidence,
     ageHoursAgo: 6,
+    geo: {
+      resolvedIp: "203.0.113.77",
+      geoLat: 39.9042,
+      geoLon: 116.4074,
+      geoCountry: "CN",
+      geoCity: "Beijing",
+      abuseScore: 96,
+    },
   });
   await confirm(bankA, thirdPhishingIp, "CONFIRM", "Certificate fingerprint match confirmed against our own telemetry.");
   await confirm(hospitalB, thirdPhishingIp, "CONFIRM", "Consistent with the campaign pattern.");
@@ -177,6 +217,14 @@ async function main() {
     severity: "medium",
     description: "Repeated failed SSH login attempts against research lab servers, consistent with automated credential stuffing.",
     ageHoursAgo: 2,
+    geo: {
+      resolvedIp: "192.0.2.150",
+      geoLat: -23.5505,
+      geoLon: -46.6333,
+      geoCountry: "BR",
+      geoCity: "Sao Paulo",
+      abuseScore: 65,
+    },
   });
 
   console.log("seed: Company E reports a disputed indicator…");
@@ -188,6 +236,14 @@ async function main() {
     severity: "low",
     description: "IP observed port-scanning our perimeter, possible reconnaissance activity ahead of a targeted attack.",
     ageHoursAgo: 1,
+    geo: {
+      resolvedIp: "198.51.100.9",
+      geoLat: 52.3676,
+      geoLon: 4.9041,
+      geoCountry: "NL",
+      geoCity: "Amsterdam",
+      abuseScore: 20,
+    },
   });
   await confirm(certC, disputed, "DISPUTE", "This is a known internet-wide research scanner, not targeted recon.");
 

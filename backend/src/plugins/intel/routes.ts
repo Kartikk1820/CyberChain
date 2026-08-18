@@ -80,6 +80,12 @@ export async function registerIntelRoutes(app: FastifyInstance) {
       confidence: r.confidenceScore?.score ?? 0,
       reporterOrgName: r.reporter.name,
       createdAt: r.createdAt.toISOString(),
+      resolvedIp: r.resolvedIp,
+      geoLat: r.geoLat,
+      geoLon: r.geoLon,
+      geoCountry: r.geoCountry,
+      geoCity: r.geoCity,
+      abuseScore: r.abuseScore,
     }));
   });
 
@@ -98,5 +104,45 @@ export async function registerIntelRoutes(app: FastifyInstance) {
       indicatorCount: c.indicators.length,
       orgCount: c.orgs.length,
     }));
+  });
+
+  app.get<{ Params: { id: string } }>("/campaigns/:id", async (req, reply) => {
+    const campaign = await prisma.campaign.findUnique({
+      where: { id: req.params.id },
+      include: {
+        indicators: { include: { threatReport: { include: { reporter: true, confidenceScore: true } } } },
+        orgs: { include: { organization: true } },
+      },
+    });
+    if (!campaign) return reply.code(404).send({ error: "campaign not found" });
+
+    return {
+      id: campaign.id,
+      name: campaign.name,
+      commonTechniques: campaign.commonTechniques,
+      confidence: campaign.confidence,
+      detectedAt: campaign.detectedAt.toISOString(),
+      updatedAt: campaign.updatedAt.toISOString(),
+      indicatorCount: campaign.indicators.length,
+      orgCount: campaign.orgs.length,
+      indicators: campaign.indicators.map((ci) => ({
+        id: ci.threatReport.id,
+        indicator: ci.threatReport.indicator,
+        indicatorType: ci.threatReport.indicatorType,
+        attackType: ci.threatReport.attackType,
+        mitreTechnique: ci.threatReport.mitreTechnique,
+        severity: ci.threatReport.severity,
+        status: ci.threatReport.status,
+        confidence: ci.threatReport.confidenceScore?.score ?? 0,
+        reporterOrgName: ci.threatReport.reporter.name,
+        createdAt: ci.threatReport.createdAt.toISOString(),
+      })),
+      orgs: campaign.orgs.map((co) => ({
+        id: co.organization.id,
+        name: co.organization.name,
+        type: co.organization.type,
+        reputation: co.organization.reputation,
+      })),
+    };
   });
 }

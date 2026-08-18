@@ -19,6 +19,7 @@ export function Dashboard() {
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [query, setQuery] = useState("");
 
   const refresh = useCallback(async () => {
     const [r, o, c] = await Promise.all([getReports(), getOrgs(), getCampaigns()]);
@@ -47,13 +48,34 @@ export function Dashboard() {
 
   if (loading) return <p className="text-slate-500 text-sm">Loading…</p>;
 
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredReports = normalizedQuery
+    ? reports.filter((r) =>
+        [r.indicator, r.indicatorType, r.resolvedIp, r.attackType, r.mitreTechnique, r.reporter?.name]
+          .filter(Boolean)
+          .some((field) => field!.toLowerCase().includes(normalizedQuery))
+      )
+    : reports;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <section className="lg:col-span-2 space-y-4">
-        <h2 className="text-lg font-semibold">Live Threat Feed</h2>
+        <div className="flex items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold">Live Threat Feed</h2>
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search IP, domain, URL, hash…"
+            className="w-64 rounded-md border border-slate-800 bg-slate-900/50 px-3 py-1.5 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-slate-600"
+          />
+        </div>
         <div className="space-y-3">
           {reports.length === 0 && <p className="text-sm text-slate-500">No reports yet — be the first to report a threat.</p>}
-          {reports.map((r) => (
+          {reports.length > 0 && filteredReports.length === 0 && (
+            <p className="text-sm text-slate-500">No reports match "{query}".</p>
+          )}
+          {filteredReports.map((r) => (
             <Link
               key={r.id}
               to={`/reports/${r.id}`}

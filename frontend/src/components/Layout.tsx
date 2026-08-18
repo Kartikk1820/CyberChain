@@ -7,6 +7,7 @@ const NAV_LINKS = [
   { to: "/report", label: "Report Threat" },
   { to: "/zero-trust", label: "Zero-Trust Sim" },
   { to: "/policies", label: "Policies" },
+  { to: "/globe", label: "Threat Globe" },
 ];
 
 export function Layout() {

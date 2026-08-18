@@ -4,7 +4,7 @@ import { computeConfidence, evidenceQuality, INDICATOR_FORMAT, type ConfidenceCo
 
 export type { ConfidenceComputation } from "./confidenceFormula";
 
-export async function computeAndPersistConfidence(threatReportId: string): Promise<ConfidenceComputation> {
+async function gatherConfidenceInputs(threatReportId: string) {
   const report = await prisma.threatReport.findUniqueOrThrow({
     where: { id: threatReportId },
     include: {
@@ -19,18 +19,32 @@ export async function computeAndPersistConfidence(threatReportId: string): Promi
   const evidenceScore = evidenceQuality(!!report.evidence, indicatorFormatValid, report.description.trim().length);
   const ageHours = (Date.now() - report.createdAt.getTime()) / (1000 * 60 * 60);
 
-  const computation = computeConfidence({
-    reporterReputation: report.reporter.reputation,
-    evidenceScore,
-    aiConfidence: report.aiConfidence,
-    ageHours,
-    currentStatus: report.status,
-    confirmations: report.confirmations.map((c) => ({
-      type: c.type,
-      confirmingOrgId: c.confirmingOrgId,
-      confirmingOrgReputation: c.confirmingOrg.reputation,
-    })),
-  });
+  return {
+    report,
+    inputs: {
+      reporterReputation: report.reporter.reputation,
+      evidenceScore,
+      aiConfidence: report.aiConfidence,
+      ageHours,
+      currentStatus: report.status,
+      confirmations: report.confirmations.map((c) => ({
+        type: c.type,
+        confirmingOrgId: c.confirmingOrgId,
+        confirmingOrgReputation: c.confirmingOrg.reputation,
+      })),
+    },
+  };
+}
+
+/** Recomputes the confidence score/breakdown without writing anything — used to show a live "how was this calculated" view. */
+export async function previewConfidence(threatReportId: string): Promise<ConfidenceComputation> {
+  const { inputs } = await gatherConfidenceInputs(threatReportId);
+  return computeConfidence(inputs);
+}
+
+export async function computeAndPersistConfidence(threatReportId: string): Promise<ConfidenceComputation> {
+  const { report, inputs } = await gatherConfidenceInputs(threatReportId);
+  const computation = computeConfidence(inputs);
 
   const { score, status } = computation;
   const previousStatus = report.status;
