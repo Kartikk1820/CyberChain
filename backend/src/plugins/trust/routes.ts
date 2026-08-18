@@ -13,6 +13,7 @@ import { classify } from "../intel/classifier";
 import { enrichClassification } from "../intel/llmEnrichment";
 import { enrichIndicatorWithIp, type IpIntelResult } from "../intel/ipIntel.service";
 import { computeAndPersistConfidence, previewConfidence } from "../intel/confidence.service";
+import { recordAudit, AUDIT_ACTIONS } from "../audit/audit.service";
 
 function serializeOrg(org: Organization) {
   return {
@@ -44,6 +45,13 @@ export async function registerTrustRoutes(app: FastifyInstance) {
 
       const org = await registerOrganization({ name, type, publicKey, email, password });
       const token = app.jwt.sign({ orgId: org.id });
+      recordAudit({
+        action: AUDIT_ACTIONS.ORG_REGISTERED,
+        actorOrgId: org.id,
+        targetType: "Organization",
+        targetId: org.id,
+        message: `${org.name} registered as a new organization (${org.type})`,
+      });
       return reply.code(201).send({ organization: serializeOrg(org), token });
     }
   );
@@ -54,6 +62,13 @@ export async function registerTrustRoutes(app: FastifyInstance) {
     const org = await verifyLogin(email, password);
     if (!org) return reply.code(401).send({ error: "invalid credentials" });
     const token = app.jwt.sign({ orgId: org.id });
+    recordAudit({
+      action: AUDIT_ACTIONS.ORG_LOGIN,
+      actorOrgId: org.id,
+      targetType: "Organization",
+      targetId: org.id,
+      message: `${org.name} logged in`,
+    });
     return { organization: serializeOrg(org), token };
   });
 
@@ -204,6 +219,15 @@ export async function registerTrustRoutes(app: FastifyInstance) {
 
       const confidence = await computeAndPersistConfidence(report.id);
 
+      recordAudit({
+        action: AUDIT_ACTIONS.REPORT_SUBMITTED,
+        actorOrgId: orgId,
+        targetType: "ThreatReport",
+        targetId: report.id,
+        message: `${reporter.name} submitted a ${indicatorType} report for "${indicator}" (${attackType})`,
+        metadata: { indicator, indicatorType, attackType, mitreTechnique, initialStatus: confidence.status },
+      });
+
       broadcast({ type: "ledger:block_added", payload: { blockIdx: ledgerBlock.idx, hash: ledgerBlock.hash, ref: report.id } });
       broadcast({
         type: "report:new",
@@ -309,6 +333,14 @@ export async function registerTrustRoutes(app: FastifyInstance) {
 
     const message = `EVIDENCE TAMPERING DETECTED — stored evidence no longer matches the hash anchored on the ledger at block #${report.blockchainBlockId}`;
     broadcast({ type: "tamper:detected", payload: { reportId: report.id, kind: "evidence", message } });
+
+    recordAudit({
+      action: AUDIT_ACTIONS.TAMPER_SIMULATED,
+      actorOrgId: currentOrgId(req),
+      targetType: "ThreatReport",
+      targetId: report.id,
+      message: `Tampering simulation triggered on report ${report.id} — evidence hash mismatch detected`,
+    });
 
     return { tampered: true, message };
   });

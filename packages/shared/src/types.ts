@@ -140,3 +140,35 @@ export interface SecurityPolicyRules {
   thresholds: { allow: number; mfa: number; restrict: number };
   overrides: Array<{ if: string; then: AccessDecision; reason: string }>;
 }
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  actorOrgId: string | null;
+  actorOrgName: string | null;
+  targetType: string | null;
+  targetId: string | null;
+  message: string;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface ReportAttachmentSummary {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  uploadedByOrgName: string;
+  createdAt: string;
+}
+
+export interface AnalyticsSummary {
+  totalReports: number;
+  totalOrgs: number;
+  totalCampaigns: number;
+  statusBreakdown: Array<{ status: ReportStatus; count: number }>;
+  attackTypeBreakdown: Array<{ attackType: string; count: number }>;
+  mitreBreakdown: Array<{ mitreTechnique: string; count: number }>;
+  reportsByDay: Array<{ date: string; count: number }>;
+  topOrgs: Array<{ name: string; reportsCount: number; reputation: number }>;
+}

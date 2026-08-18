@@ -1,9 +1,12 @@
 import type {
   AccessAttempt,
+  AnalyticsSummary,
+  AuditLogEntry,
   Campaign,
   CampaignDetail,
   ConfirmationType,
   Organization,
+  ReportAttachmentSummary,
   SecurityPolicyRules,
   ThreatReport,
 } from "@sixsync/shared";
@@ -120,6 +123,35 @@ export function getPolicies(token: string) {
 
 export function putPolicies(rules: SecurityPolicyRules, token: string) {
   return request<SecurityPolicyRules>("/policies", { method: "PUT", body: JSON.stringify(rules) }, token);
+}
+
+export function getAuditLog(params: { limit?: number; orgId?: string; action?: string } = {}) {
+  const qs = new URLSearchParams();
+  if (params.limit) qs.set("limit", String(params.limit));
+  if (params.orgId) qs.set("orgId", params.orgId);
+  if (params.action) qs.set("action", params.action);
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return request<AuditLogEntry[]>(`/audit${suffix}`);
+}
+
+export function getAnalyticsSummary() {
+  return request<AnalyticsSummary>("/analytics/summary");
+}
+
+export function getReportAttachments(reportId: string) {
+  return request<ReportAttachmentSummary[]>(`/reports/${reportId}/attachments`);
+}
+
+export function uploadAttachment(reportId: string, formData: FormData, token: string) {
+  return request<{ attachments: { id: string; filename: string; size: number }[] }>(
+    `/reports/${reportId}/attachments`,
+    { method: "POST", body: formData },
+    token
+  );
+}
+
+export function attachmentDownloadUrl(attachmentId: string) {
+  return `${API_URL}/attachments/${attachmentId}/download`;
 }
 
 export function verifyLedger() {

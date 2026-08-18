@@ -8,6 +8,8 @@ const NAV_LINKS = [
   { to: "/zero-trust", label: "Zero-Trust Sim" },
   { to: "/policies", label: "Policies" },
   { to: "/globe", label: "Threat Globe" },
+  { to: "/analytics", label: "Analytics" },
+  { to: "/audit", label: "Audit Trail" },
 ];
 
 export function Layout() {

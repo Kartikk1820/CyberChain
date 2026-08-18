@@ -5,6 +5,7 @@ import { broadcast } from "../../ws/broadcast";
 import { applyReputationUpdate } from "../trust/reputation.service";
 import { computeAndPersistConfidence } from "./confidence.service";
 import { runCampaignCorrelation } from "./campaign.service";
+import { recordAudit, AUDIT_ACTIONS } from "../audit/audit.service";
 import type { ConfirmationType } from "@sixsync/shared";
 
 export async function registerIntelRoutes(app: FastifyInstance) {
@@ -34,6 +35,14 @@ export async function registerIntelRoutes(app: FastifyInstance) {
       });
 
       broadcast({ type: "confirmation:new", payload: { reportId: report.id, confirmingOrgId: orgId, confirmationType: type } });
+
+      recordAudit({
+        action: type === "CONFIRM" ? AUDIT_ACTIONS.REPORT_CONFIRMED : AUDIT_ACTIONS.REPORT_DISPUTED,
+        actorOrgId: orgId,
+        targetType: "ThreatReport",
+        targetId: report.id,
+        message: `Report ${report.indicator} was ${type === "CONFIRM" ? "confirmed" : "disputed"}${evidenceNote ? `: "${evidenceNote}"` : ""}`,
+      });
 
       const reputationUpdate = await applyReputationUpdate(report.id);
       if (reputationUpdate.delta !== 0) {
