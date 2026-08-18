@@ -9,8 +9,10 @@ import { ThreatFeedDetail } from "./pages/ThreatFeedDetail";
 import { CampaignDetail } from "./pages/CampaignDetail";
 import { ZeroTrustSim } from "./pages/ZeroTrustSim";
 import { Policies } from "./pages/Policies";
+import { AuditTrail } from "./pages/AuditTrail";
 
 const ThreatGlobe = lazy(() => import("./pages/ThreatGlobe"));
+const Analytics = lazy(() => import("./pages/Analytics"));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const { token } = useAuth();
@@ -35,11 +37,20 @@ function AppRoutes() {
         <Route path="/campaigns/:id" element={<CampaignDetail />} />
         <Route path="/zero-trust" element={<ZeroTrustSim />} />
         <Route path="/policies" element={<Policies />} />
+        <Route path="/audit" element={<AuditTrail />} />
         <Route
           path="/globe"
           element={
             <Suspense fallback={<p className="text-slate-500 text-sm">Loading globe…</p>}>
               <ThreatGlobe />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <Suspense fallback={<p className="text-slate-500 text-sm">Loading analytics…</p>}>
+              <Analytics />
             </Suspense>
           }
         />

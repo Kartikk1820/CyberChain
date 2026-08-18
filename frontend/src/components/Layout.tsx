@@ -8,6 +8,8 @@ const NAV_LINKS = [
   { to: "/zero-trust", label: "Zero-Trust Sim" },
   { to: "/policies", label: "Policies" },
   { to: "/globe", label: "Threat Globe" },
+  { to: "/analytics", label: "Analytics" },
+  { to: "/audit", label: "Audit Trail" },
 ];
 
 export function Layout() {
@@ -19,7 +21,7 @@ export function Layout() {
       <header className="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <span className="font-semibold tracking-tight">SIXSYNC</span>
+            <span className="font-semibold tracking-tight">CyberChain</span>
             <nav className="flex gap-1">
               {NAV_LINKS.map((link) => (
                 <NavLink

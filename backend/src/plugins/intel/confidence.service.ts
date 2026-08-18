@@ -1,6 +1,7 @@
 import { prisma } from "../../db/prisma";
 import { recomputeAccuracy } from "../trust/reputation.service";
 import { computeConfidence, evidenceQuality, INDICATOR_FORMAT, type ConfidenceComputation } from "./confidenceFormula";
+import { sendCriticalReportAlert } from "./emailAlerts";
 
 export type { ConfidenceComputation } from "./confidenceFormula";
 
@@ -73,6 +74,16 @@ export async function computeAndPersistConfidence(threatReportId: string): Promi
 
   if (status !== previousStatus) {
     await recomputeAccuracy(report.reporterOrgId);
+  }
+
+  if (status === "CRITICAL" && previousStatus !== "CRITICAL") {
+    sendCriticalReportAlert({
+      id: report.id,
+      indicator: report.indicator,
+      indicatorType: report.indicatorType,
+      attackType: report.attackType,
+      mitreTechnique: report.mitreTechnique,
+    });
   }
 
   return computation;

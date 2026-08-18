@@ -62,6 +62,9 @@ model Organization {
   accessAttempts AccessAttempt[]
   securityPolicy SecurityPolicy?
   campaignOrgs   CampaignOrg[]
+  auditLogs      AuditLog[]
+  attachments    ReportAttachment[]
+  comments       ReportComment[]
 
   @@index([reputation])
 }
@@ -125,12 +128,60 @@ model ThreatReport {
   confirmations        Confirmation[]
   confidenceScore     ThreatConfidenceScore?
   campaignIndicators CampaignIndicator[]
+  attachments        ReportAttachment[]
+  comments           ReportComment[]
 
   @@index([indicator])
   @@index([mitreTechnique])
   @@index([status])
   @@index([createdAt])
   @@index([resolvedIp])
+}
+
+model ReportAttachment {
+  id              String   @id @default(uuid())
+  threatReportId  String
+  filename        String
+  mimeType        String
+  size            Int
+  data            Bytes
+  uploadedByOrgId String
+  createdAt       DateTime @default(now())
+
+  threatReport ThreatReport @relation(fields: [threatReportId], references: [id])
+  uploadedBy   Organization @relation(fields: [uploadedByOrgId], references: [id])
+
+  @@index([threatReportId])
+}
+
+model ReportComment {
+  id             String   @id @default(uuid())
+  threatReportId String
+  authorOrgId    String
+  body           String
+  createdAt      DateTime @default(now())
+
+  threatReport ThreatReport @relation(fields: [threatReportId], references: [id])
+  authorOrg    Organization @relation(fields: [authorOrgId], references: [id])
+
+  @@index([threatReportId])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  action     String
+  actorOrgId String?
+  targetType String?
+  targetId   String?
+  message    String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actorOrg Organization? @relation(fields: [actorOrgId], references: [id])
+
+  @@index([createdAt])
+  @@index([actorOrgId])
+  @@index([action])
 }
 
 model Confirmation {

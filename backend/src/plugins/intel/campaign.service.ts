@@ -1,5 +1,7 @@
 import { prisma } from "../../db/prisma";
 import { broadcast } from "../../ws/broadcast";
+import { sendCampaignAlert } from "./emailAlerts";
+import { recordAudit, AUDIT_ACTIONS } from "../audit/audit.service";
 
 const CORRELATION_WINDOW_HOURS = 72;
 const MIN_DISTINCT_INDICATORS = 3;
@@ -95,6 +97,20 @@ export async function runCampaignCorrelation(): Promise<void> {
           updatedAt: created.updatedAt.toISOString(),
         },
       });
+
+      recordAudit({
+        action: AUDIT_ACTIONS.CAMPAIGN_DETECTED,
+        actorOrgId: null,
+        targetType: "Campaign",
+        targetId: created.id,
+        message: `New coordinated campaign detected: "${created.name}" across ${orgIds.size} orgs`,
+        metadata: { commonTechniques: created.commonTechniques, indicatorCount: members.length },
+      });
+
+      sendCampaignAlert(
+        { id: created.id, name: created.name, commonTechniques: created.commonTechniques, confidence: created.confidence },
+        [...orgIds]
+      );
     }
   }
 }

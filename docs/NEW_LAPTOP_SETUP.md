@@ -1,4 +1,4 @@
-# Setting up SIXSYNC on a new laptop
+# Setting up CyberChain on a new laptop
 
 Full flow to clone this repo elsewhere and get a fully seeded demo (1000 IP reports across 26 Indian orgs) running.
 
@@ -12,8 +12,8 @@ Full flow to clone this repo elsewhere and get a fully seeded demo (1000 IP repo
 All current work (threat globe, threat-intel enrichment, confirmation history, score breakdown, campaign detail, search, bulk seed) lives on the `improvements` branch. Until it's merged into `main`, check it out explicitly:
 
 ```sh
-git clone https://github.com/Kartikk1820/SIXSYNC.git
-cd SIXSYNC
+git clone https://github.com/Kartikk1820/CyberChain.git
+cd CyberChain
 git checkout improvements
 ```
 
@@ -39,7 +39,7 @@ Everything else in `.env.example` (ports, JWT secret, Postgres credentials) work
 docker compose up --build -d
 ```
 
-This builds and starts four containers: `postgres`, `ledger`, `backend`, `frontend`. On first boot the backend automatically runs Prisma migrations and the base seed script — 5 organizations, 3 confirmed/critical phishing reports, 1 campaign (see main `README.md` for that walkthrough).
+This builds and starts five containers: `postgres`, `ledger`, `backend`, `frontend`, `mailpit`. On first boot the backend automatically runs Prisma migrations and the base seed script — 5 organizations, 3 confirmed/critical phishing reports, 1 campaign (see main `README.md` for that walkthrough).
 
 Check everything's healthy:
 
@@ -76,7 +76,29 @@ password: sixsync-demo-2026
 
 Emails follow the pattern `soc@icicibank.demo`, `cybercell@sbi.demo`, `infosec@hdfcbank.demo`, etc. — see `backend/prisma/seedBulk.ts` for the full org→email list.
 
-## 5. Resetting everything
+## 5. Email alerts (mailpit)
+
+CRITICAL reports and new campaigns trigger an email alert to every org. Under docker-compose this is wired to [mailpit](https://mailpit.axllent.org/) automatically — no SMTP account, no setup:
+
+```
+ENABLE_EMAIL_ALERTS=true   (default)
+SMTP_HOST=mailpit
+SMTP_PORT=1025
+```
+
+Alerts really get "sent" (real SMTP send) but only as far as the mailpit container — nothing leaves your machine. Mailpit doesn't validate recipient domains either, so the seeded orgs' fake `.demo` addresses work fine.
+
+Watch alerts land in real time:
+
+```
+http://localhost:8025   (or whatever MAILPIT_HOST_PORT you set)
+```
+
+To trigger one for a demo: confirm the same report from enough distinct orgs to push its status to CRITICAL (see `POST /reports/:id/confirmations` in the main `README.md`), or wait for the bulk-seeded data's auto-detected campaigns — those also alert, though only ones created through the live API trigger an alert, not the bulk seed script itself (it writes straight to the DB, bypassing the route that fires alerts).
+
+To point at a real SMTP provider instead (e.g. before a real deployment), set `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` / `SMTP_PASS` / `SMTP_FROM` in `.env` — those override the mailpit defaults. Leave `ENABLE_EMAIL_ALERTS=false` to disable alerting entirely; unset SMTP config with the flag off just logs "would send" to the backend console.
+
+## 6. Resetting everything
 
 ```sh
 docker compose down -v   # drops the Postgres and ledger volumes — wipes ALL data
@@ -89,3 +111,4 @@ docker compose exec backend npm run seed:bulk
 - **Ports already in use**: override the `*_HOST_PORT` variables in `.env` (internal container ports stay fixed, so services still talk to each other regardless).
 - **Bulk seed says "already exists, skipping"**: it already ran against this database. Use the reset flow above if you want a fresh run.
 - **No abuse scores / no geolocation showing up**: check `ENABLE_TI_ENRICHMENT=true` and a valid `ABUSEIPDB_API_KEY` are set in `.env`, then restart the backend: `docker compose up -d backend`.
+- **No emails showing up in mailpit**: confirm `docker compose ps` shows `mailpit` healthy and the report/campaign actually crossed into CRITICAL — alerts only fire on that status transition, not on every confirmation.

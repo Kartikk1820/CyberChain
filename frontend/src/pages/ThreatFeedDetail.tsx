@@ -1,10 +1,89 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { ThreatReport, ScoreBreakdown } from "@sixsync/shared";
-import { confirmReport, getReportDetail, simulateTampering } from "../api/client";
+import type { ThreatReport, ScoreBreakdown, ReportAttachmentSummary, ReportComment } from "@sixsync/shared";
+import {
+  attachmentDownloadUrl,
+  confirmReport,
+  getReportAttachments,
+  getReportComments,
+  getReportDetail,
+  postComment,
+  simulateTampering,
+  uploadAttachment,
+} from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useWsEvents } from "../api/useWsEvents";
 import { ConfidenceMeter } from "../components/ConfidenceMeter";
+
+function formatBytes(size: number): string {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function AttachmentsPanel({ reportId }: { reportId: string }) {
+  const { token } = useAuth();
+  const [attachments, setAttachments] = useState<ReportAttachmentSummary[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setAttachments(await getReportAttachments(reportId));
+  }, [reportId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !token) return;
+    setUploadError(null);
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      await uploadAttachment(reportId, formData, token);
+      await refresh();
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-200">Attachments ({attachments.length})</h2>
+        <label className="text-xs text-sky-400 hover:text-sky-300 cursor-pointer">
+          {uploading ? "uploading…" : "+ upload evidence"}
+          <input type="file" className="hidden" disabled={uploading} onChange={handleFile} />
+        </label>
+      </div>
+      {uploadError && <p className="text-xs text-red-400">{uploadError}</p>}
+      {attachments.length === 0 && <p className="text-sm text-slate-500">No screenshots, logs, or files attached yet.</p>}
+      <div className="space-y-2">
+        {attachments.map((a) => (
+          <a
+            key={a.id}
+            href={attachmentDownloadUrl(a.id)}
+            className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2 hover:border-slate-700 transition-colors"
+          >
+            <div>
+              <p className="text-sm text-slate-200">{a.filename}</p>
+              <p className="text-xs text-slate-500">
+                {formatBytes(a.size)} · uploaded by {a.uploadedByOrgName} · {new Date(a.createdAt).toLocaleString()}
+              </p>
+            </div>
+            <span className="text-xs text-sky-400">download</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 type ReportDetail = ThreatReport & {
   evidenceIntegrity: boolean | null;
@@ -102,6 +181,81 @@ function ConfirmationHistory({ confirmations }: { confirmations: NonNullable<Thr
           <span className="text-xs text-slate-500 whitespace-nowrap ml-3">{new Date(c.createdAt).toLocaleString()}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function CommentThread({ reportId }: { reportId: string }) {
+  const { organization, token } = useAuth();
+  const [comments, setComments] = useState<ReportComment[]>([]);
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setComments(await getReportComments(reportId));
+  }, [reportId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useWsEvents((event) => {
+    if (event.type === "comment:new" && event.payload.threatReportId === reportId) {
+      refresh();
+    }
+  });
+
+  async function post() {
+    const body = draft.trim();
+    if (!body || !token) return;
+    setPostError(null);
+    setPosting(true);
+    try {
+      await postComment(reportId, body, token);
+      setDraft("");
+      await refresh();
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : "failed to post comment");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <h2 className="text-sm font-semibold text-slate-200">Discussion ({comments.length})</h2>
+      {comments.length === 0 && <p className="text-sm text-slate-500">No discussion yet — be the first to weigh in.</p>}
+      <div className="space-y-2">
+        {comments.map((c) => (
+          <div key={c.id} className="rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-slate-200">{c.authorOrgName}</span>
+              <span className="text-xs text-slate-500">{new Date(c.createdAt).toLocaleString()}</span>
+            </div>
+            <p className="text-sm text-slate-300 whitespace-pre-wrap">{c.body}</p>
+          </div>
+        ))}
+      </div>
+      {organization && (
+        <div className="space-y-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Add to the discussion — is this really C2, false positive, seen it elsewhere?"
+            rows={2}
+            className="w-full rounded-md border border-slate-800 bg-slate-900/50 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-slate-600"
+          />
+          {postError && <p className="text-xs text-red-400">{postError}</p>}
+          <button
+            disabled={posting || !draft.trim()}
+            onClick={post}
+            className="rounded-md bg-sky-500/20 text-sky-300 px-4 py-1.5 text-sm font-medium hover:bg-sky-500/30 disabled:opacity-40"
+          >
+            {posting ? "Posting…" : "Post comment"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -211,6 +365,10 @@ export function ThreatFeedDetail() {
         <h2 className="text-sm font-semibold text-slate-200">Confirmation history</h2>
         <ConfirmationHistory confirmations={report.confirmations ?? []} />
       </div>
+
+      <AttachmentsPanel reportId={report.id} />
+
+      <CommentThread reportId={report.id} />
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 
