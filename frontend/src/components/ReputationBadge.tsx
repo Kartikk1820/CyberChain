@@ -1,8 +1,11 @@
+import { Star } from "lucide-react";
+import { Badge } from "./ui/badge";
+
 export function ReputationBadge({ reputation }: { reputation: number }) {
-  const color = reputation >= 80 ? "bg-emerald-500/20 text-emerald-300" : reputation >= 50 ? "bg-amber-500/20 text-amber-300" : "bg-red-500/20 text-red-300";
+  const variant = reputation >= 80 ? "success" : reputation >= 50 ? "warning" : "destructive";
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
-      ★ {reputation.toFixed(0)}
-    </span>
+    <Badge variant={variant}>
+      <Star className="h-2.5 w-2.5 fill-current" /> {reputation.toFixed(0)}
+    </Badge>
   );
 }

@@ -1,10 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { lookupTechnique } from "@sixsync/shared";
 import type { IndicatorType } from "@sixsync/shared";
 import { useAuth } from "../context/AuthContext";
 import { signReportPayload } from "../crypto/keypair";
 import { submitReport } from "../api/client";
+import { Card, CardContent } from "../components/ui/card";
+import { Label } from "../components/ui/label";
+import { Input } from "../components/ui/input";
+import { Textarea } from "../components/ui/textarea";
+import { Button } from "../components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 
 const INDICATOR_TYPES: IndicatorType[] = ["IP", "DOMAIN", "HASH", "URL"];
 const SEVERITIES = ["low", "medium", "high", "critical"];
@@ -65,101 +72,107 @@ export function ReportThreat() {
 
       const report = await submitReport(form, token);
       setSuccess("Report submitted, signed, and anchored to the ledger.");
+      toast.success("Report signed & anchored", { description: `${indicator} — block anchored to the ledger.` });
       setTimeout(() => navigate(`/reports/${report.id}`), 800);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "report submission failed");
+      const message = err instanceof Error ? err.message : "report submission failed";
+      setError(message);
+      toast.error("Submission failed", { description: message });
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-lg font-semibold mb-1">Report a Threat</h1>
-      <p className="text-sm text-slate-500 mb-6">
+    <div className="max-w-xl space-y-1">
+      <h1 className="text-lg font-semibold">Report a Threat</h1>
+      <p className="text-sm text-muted-foreground mb-4">
         Signed client-side with your organization's private key, hashed, and anchored to the ledger on submission.
       </p>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-2">
-            <label className="block text-xs text-slate-400 mb-1">Indicator</label>
-            <input
-              required
-              value={indicator}
-              onChange={(e) => setIndicator(e.target.value)}
-              placeholder="203.0.113.42 / evil.example / …"
-              className="w-full rounded-md bg-slate-900 border border-slate-800 px-3 py-2 text-sm font-mono"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Type</label>
-            <select
-              value={indicatorType}
-              onChange={(e) => setIndicatorType(e.target.value as IndicatorType)}
-              className="w-full rounded-md bg-slate-900 border border-slate-800 px-3 py-2 text-sm"
-            >
-              {INDICATOR_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+      <Card>
+        <CardContent className="pt-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2 space-y-1.5">
+                <Label htmlFor="indicator">Indicator</Label>
+                <Input
+                  id="indicator"
+                  required
+                  value={indicator}
+                  onChange={(e) => setIndicator(e.target.value)}
+                  placeholder="203.0.113.42 / evil.example / …"
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Type</Label>
+                <Select value={indicatorType} onValueChange={(v) => setIndicatorType(v as IndicatorType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INDICATOR_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {t}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Description</label>
-          <textarea
-            required
-            minLength={20}
-            rows={4}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe the attack, evidence observed, and impact…"
-            className="w-full rounded-md bg-slate-900 border border-slate-800 px-3 py-2 text-sm"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            Suggested classification: <span className="text-slate-300">{suggested.defaultAttackType}</span> (
-            {suggested.id} — {suggested.name})
-          </p>
-        </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                required
+                minLength={20}
+                rows={4}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Describe the attack, evidence observed, and impact…"
+              />
+              <p className="text-xs text-muted-foreground">
+                Suggested classification: <span className="text-foreground/90">{suggested.defaultAttackType}</span> (
+                {suggested.id} — {suggested.name})
+              </p>
+            </div>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Severity</label>
-          <select
-            value={severity}
-            onChange={(e) => setSeverity(e.target.value)}
-            className="w-full rounded-md bg-slate-900 border border-slate-800 px-3 py-2 text-sm"
-          >
-            {SEVERITIES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-1.5">
+              <Label>Severity</Label>
+              <Select value={severity} onValueChange={setSeverity}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEVERITIES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div>
-          <label className="block text-xs text-slate-400 mb-1">Evidence file (optional)</label>
-          <input
-            type="file"
-            onChange={(e) => setEvidenceFile(e.target.files?.[0] ?? null)}
-            className="w-full text-xs text-slate-400"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Evidence file (optional)</Label>
+              <input
+                type="file"
+                onChange={(e) => setEvidenceFile(e.target.files?.[0] ?? null)}
+                className="w-full text-xs text-muted-foreground file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-2.5 file:py-1.5 file:text-xs file:text-foreground"
+              />
+            </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
-        {success && <p className="text-sm text-emerald-400">{success}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
+            {success && <p className="text-sm text-emerald-400">{success}</p>}
 
-        <button
-          disabled={busy}
-          type="submit"
-          className="w-full rounded-md bg-sky-500 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:opacity-50"
-        >
-          {busy ? "Signing & anchoring…" : "Sign & Submit Report"}
-        </button>
-      </form>
+            <Button disabled={busy} type="submit" className="w-full">
+              {busy ? "Signing & anchoring…" : "Sign & Submit Report"}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -4,6 +4,11 @@ import { getAccessAttempts, postAccessAttempt } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useWsEvents } from "../api/useWsEvents";
 import { RiskBreakdown } from "../components/RiskBreakdown";
+import { Card, CardContent } from "../components/ui/card";
+import { Label } from "../components/ui/label";
+import { Input } from "../components/ui/input";
+import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
 
 export function ZeroTrustSim() {
   const { token, organization } = useAuth();
@@ -50,85 +55,80 @@ export function ZeroTrustSim() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div>
         <h1 className="text-lg font-semibold mb-1">Zero-Trust Access Simulator</h1>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm text-muted-foreground mb-6">
           Simulate a login attempt and watch the risk engine score it against the network's live threat feed.
         </p>
 
-        <form onSubmit={runSimulation} className="space-y-3 mb-6">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">User</label>
-            <input
-              required
-              value={user}
-              onChange={(e) => setUser(e.target.value)}
-              className="w-full rounded-md bg-slate-900 border border-slate-800 px-3 py-2 text-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Source IP</label>
-            <input
-              required
-              value={ip}
-              onChange={(e) => setIp(e.target.value)}
-              placeholder="try a confirmed-malicious IP from the threat feed"
-              className="w-full rounded-md bg-slate-900 border border-slate-800 px-3 py-2 text-sm font-mono"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">Device fingerprint</label>
-            <input
-              required
-              value={deviceFingerprint}
-              onChange={(e) => setDeviceFingerprint(e.target.value)}
-              className="w-full rounded-md bg-slate-900 border border-slate-800 px-3 py-2 text-sm font-mono"
-            />
-          </div>
-          <label className="flex items-center gap-2 text-sm text-slate-300">
-            <input type="checkbox" checked={passwordValid} onChange={(e) => setPasswordValid(e.target.checked)} />
-            Password valid
-          </label>
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          <button
-            disabled={busy}
-            type="submit"
-            className="w-full rounded-md bg-sky-500 py-2 text-sm font-medium text-slate-950 hover:bg-sky-400 disabled:opacity-50"
-          >
-            {busy ? "Scoring…" : "Run Access Attempt"}
-          </button>
-        </form>
+        <Card className="mb-6">
+          <CardContent className="pt-4">
+            <form onSubmit={runSimulation} className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="zt-user">User</Label>
+                <Input id="zt-user" required value={user} onChange={(e) => setUser(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="zt-ip">Source IP</Label>
+                <Input
+                  id="zt-ip"
+                  required
+                  value={ip}
+                  onChange={(e) => setIp(e.target.value)}
+                  placeholder="try a confirmed-malicious IP from the threat feed"
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="zt-device">Device fingerprint</Label>
+                <Input
+                  id="zt-device"
+                  required
+                  value={deviceFingerprint}
+                  onChange={(e) => setDeviceFingerprint(e.target.value)}
+                  className="font-mono"
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-foreground/90">
+                <input type="checkbox" checked={passwordValid} onChange={(e) => setPasswordValid(e.target.checked)} />
+                Password valid
+              </label>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button disabled={busy} type="submit" className="w-full">
+                {busy ? "Scoring…" : "Run Access Attempt"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
         {result && (
-          <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4">
-            <h2 className="text-sm font-semibold mb-3">Risk Breakdown</h2>
-            <RiskBreakdown breakdown={result} decision={result.decision} policyApplied={result.policyApplied} />
-          </div>
+          <Card>
+            <CardContent className="pt-4">
+              <h2 className="text-sm font-semibold mb-3">Risk Breakdown</h2>
+              <RiskBreakdown breakdown={result} decision={result.decision} policyApplied={result.policyApplied} />
+            </CardContent>
+          </Card>
         )}
       </div>
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Recent Access Attempts</h2>
         <div className="space-y-2">
-          {history.length === 0 && <p className="text-sm text-slate-500">No access attempts simulated yet.</p>}
+          {history.length === 0 && <p className="text-sm text-muted-foreground">No access attempts simulated yet.</p>}
           {history.map((a) => (
-            <div key={a.id} className="rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2 text-sm">
-              <div className="flex items-center justify-between">
-                <span>{a.user}</span>
-                <span
-                  className={`text-xs font-medium ${
-                    a.decision === "ALLOW"
-                      ? "text-emerald-400"
-                      : a.decision === "BLOCK"
-                        ? "text-red-400"
-                        : "text-amber-400"
-                  }`}
-                >
-                  {a.decision}
-                </span>
-              </div>
-              <p className="text-xs text-slate-500 font-mono">
-                {a.ip} · score {a.totalRiskScore.toFixed(1)}
-              </p>
-            </div>
+            <Card key={a.id}>
+              <CardContent className="py-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">{a.user}</span>
+                  <Badge
+                    variant={a.decision === "ALLOW" ? "success" : a.decision === "BLOCK" ? "destructive" : "warning"}
+                  >
+                    {a.decision}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground font-mono">
+                  {a.ip} · score {a.totalRiskScore.toFixed(1)}
+                </p>
+              </CardContent>
+            </Card>
           ))}
         </div>
       </div>
