@@ -7,6 +7,7 @@ import type {
   ConfirmationType,
   Organization,
   ReportAttachmentSummary,
+  ReportComment,
   SecurityPolicyRules,
   ThreatReport,
 } from "@sixsync/shared";
@@ -152,6 +153,14 @@ export function uploadAttachment(reportId: string, formData: FormData, token: st
 
 export function attachmentDownloadUrl(attachmentId: string) {
   return `${API_URL}/attachments/${attachmentId}/download`;
+}
+
+export function getReportComments(reportId: string) {
+  return request<ReportComment[]>(`/reports/${reportId}/comments`);
+}
+
+export function postComment(reportId: string, body: string, token: string) {
+  return request<ReportComment>(`/reports/${reportId}/comments`, { method: "POST", body: JSON.stringify({ body }) }, token);
 }
 
 export function verifyLedger() {

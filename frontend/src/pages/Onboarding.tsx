@@ -60,7 +60,7 @@ export function Onboarding() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 text-slate-100 px-4">
       <div className="w-full max-w-md">
-        <h1 className="text-2xl font-semibold mb-1">SIXSYNC</h1>
+        <h1 className="text-2xl font-semibold mb-1">CyberChain</h1>
         <p className="text-sm text-slate-400 mb-6">Decentralized Cyber Defense &amp; Trust Network</p>
 
         <div className="flex gap-1 mb-4 rounded-lg bg-slate-900 p-1">

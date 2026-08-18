@@ -153,6 +153,15 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
+export interface ReportComment {
+  id: string;
+  threatReportId: string;
+  authorOrgId: string;
+  authorOrgName: string;
+  body: string;
+  createdAt: string;
+}
+
 export interface ReportAttachmentSummary {
   id: string;
   filename: string;

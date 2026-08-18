@@ -64,6 +64,7 @@ model Organization {
   campaignOrgs   CampaignOrg[]
   auditLogs      AuditLog[]
   attachments    ReportAttachment[]
+  comments       ReportComment[]
 
   @@index([reputation])
 }
@@ -128,6 +129,7 @@ model ThreatReport {
   confidenceScore     ThreatConfidenceScore?
   campaignIndicators CampaignIndicator[]
   attachments        ReportAttachment[]
+  comments           ReportComment[]
 
   @@index([indicator])
   @@index([mitreTechnique])
@@ -148,6 +150,19 @@ model ReportAttachment {
 
   threatReport ThreatReport @relation(fields: [threatReportId], references: [id])
   uploadedBy   Organization @relation(fields: [uploadedByOrgId], references: [id])
+
+  @@index([threatReportId])
+}
+
+model ReportComment {
+  id             String   @id @default(uuid())
+  threatReportId String
+  authorOrgId    String
+  body           String
+  createdAt      DateTime @default(now())
+
+  threatReport ThreatReport @relation(fields: [threatReportId], references: [id])
+  authorOrg    Organization @relation(fields: [authorOrgId], references: [id])
 
   @@index([threatReportId])
 }

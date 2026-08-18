@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { ThreatReport, ScoreBreakdown, ReportAttachmentSummary } from "@sixsync/shared";
+import type { ThreatReport, ScoreBreakdown, ReportAttachmentSummary, ReportComment } from "@sixsync/shared";
 import {
   attachmentDownloadUrl,
   confirmReport,
   getReportAttachments,
+  getReportComments,
   getReportDetail,
+  postComment,
   simulateTampering,
   uploadAttachment,
 } from "../api/client";
@@ -183,6 +185,81 @@ function ConfirmationHistory({ confirmations }: { confirmations: NonNullable<Thr
   );
 }
 
+function CommentThread({ reportId }: { reportId: string }) {
+  const { organization, token } = useAuth();
+  const [comments, setComments] = useState<ReportComment[]>([]);
+  const [draft, setDraft] = useState("");
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setComments(await getReportComments(reportId));
+  }, [reportId]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  useWsEvents((event) => {
+    if (event.type === "comment:new" && event.payload.threatReportId === reportId) {
+      refresh();
+    }
+  });
+
+  async function post() {
+    const body = draft.trim();
+    if (!body || !token) return;
+    setPostError(null);
+    setPosting(true);
+    try {
+      await postComment(reportId, body, token);
+      setDraft("");
+      await refresh();
+    } catch (err) {
+      setPostError(err instanceof Error ? err.message : "failed to post comment");
+    } finally {
+      setPosting(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <h2 className="text-sm font-semibold text-slate-200">Discussion ({comments.length})</h2>
+      {comments.length === 0 && <p className="text-sm text-slate-500">No discussion yet — be the first to weigh in.</p>}
+      <div className="space-y-2">
+        {comments.map((c) => (
+          <div key={c.id} className="rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm text-slate-200">{c.authorOrgName}</span>
+              <span className="text-xs text-slate-500">{new Date(c.createdAt).toLocaleString()}</span>
+            </div>
+            <p className="text-sm text-slate-300 whitespace-pre-wrap">{c.body}</p>
+          </div>
+        ))}
+      </div>
+      {organization && (
+        <div className="space-y-2">
+          <textarea
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Add to the discussion — is this really C2, false positive, seen it elsewhere?"
+            rows={2}
+            className="w-full rounded-md border border-slate-800 bg-slate-900/50 px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-slate-600"
+          />
+          {postError && <p className="text-xs text-red-400">{postError}</p>}
+          <button
+            disabled={posting || !draft.trim()}
+            onClick={post}
+            className="rounded-md bg-sky-500/20 text-sky-300 px-4 py-1.5 text-sm font-medium hover:bg-sky-500/30 disabled:opacity-40"
+          >
+            {posting ? "Posting…" : "Post comment"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ThreatFeedDetail() {
   const { id } = useParams<{ id: string }>();
   const { organization, token } = useAuth();
@@ -290,6 +367,8 @@ export function ThreatFeedDetail() {
       </div>
 
       <AttachmentsPanel reportId={report.id} />
+
+      <CommentThread reportId={report.id} />
 
       {error && <p className="text-sm text-red-400">{error}</p>}
 

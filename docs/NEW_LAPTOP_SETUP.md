@@ -1,4 +1,4 @@
-# Setting up SIXSYNC on a new laptop
+# Setting up CyberChain on a new laptop
 
 Full flow to clone this repo elsewhere and get a fully seeded demo (1000 IP reports across 26 Indian orgs) running.
 
@@ -12,8 +12,8 @@ Full flow to clone this repo elsewhere and get a fully seeded demo (1000 IP repo
 All current work (threat globe, threat-intel enrichment, confirmation history, score breakdown, campaign detail, search, bulk seed) lives on the `improvements` branch. Until it's merged into `main`, check it out explicitly:
 
 ```sh
-git clone https://github.com/Kartikk1820/SIXSYNC.git
-cd SIXSYNC
+git clone https://github.com/Kartikk1820/CyberChain.git
+cd CyberChain
 git checkout improvements
 ```
 

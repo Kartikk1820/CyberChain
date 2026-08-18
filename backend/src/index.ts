@@ -6,6 +6,7 @@ import websocket from "@fastify/websocket";
 import { env } from "./config/env";
 import { registerTrustRoutes } from "./plugins/trust/routes";
 import { registerAttachmentRoutes } from "./plugins/trust/attachments";
+import { registerCommentRoutes } from "./plugins/trust/comments";
 import { registerIntelRoutes } from "./plugins/intel/routes";
 import { registerDefenseRoutes } from "./plugins/defense/routes";
 import { registerAuditRoutes } from "./plugins/audit/routes";
@@ -36,6 +37,7 @@ async function main() {
 
   await registerTrustRoutes(app);
   await registerAttachmentRoutes(app);
+  await registerCommentRoutes(app);
   await registerIntelRoutes(app);
   await registerDefenseRoutes(app);
   await registerAuditRoutes(app);

@@ -29,7 +29,7 @@ export function downloadKeyFile(orgName: string, orgId: string, did: string, key
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `sixsync-${orgName.replace(/\s+/g, "-").toLowerCase()}-keys.json`;
+  a.download = `cyberchain-${orgName.replace(/\s+/g, "-").toLowerCase()}-keys.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();

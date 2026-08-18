@@ -84,10 +84,10 @@ export async function sendCriticalReportAlert(report: CriticalReportInfo): Promi
     const recipients = await resolveAlertRecipients(allOrgs.map((o) => o.id));
     const result = await sendAlertEmail({
       to: recipients,
-      subject: `[SIXSYNC] CRITICAL threat: ${report.indicator}`,
+      subject: `[CyberChain] CRITICAL threat: ${report.indicator}`,
       html: `<p><strong>${report.indicator}</strong> (${report.indicatorType}) has reached <strong>CRITICAL</strong> status.</p>
         <p>Attack type: ${report.attackType}<br/>MITRE technique: ${report.mitreTechnique}</p>
-        <p>Review it in SIXSYNC.</p>`,
+        <p>Review it in CyberChain.</p>`,
     });
     await recordAudit({
       action: AUDIT_ACTIONS.ALERT_EMAIL_SENT,
@@ -114,10 +114,10 @@ export async function sendCampaignAlert(campaign: CampaignAlertInfo, orgIds: str
     const recipients = await resolveAlertRecipients(orgIds);
     const result = await sendAlertEmail({
       to: recipients,
-      subject: `[SIXSYNC] Coordinated campaign detected: ${campaign.name}`,
+      subject: `[CyberChain] Coordinated campaign detected: ${campaign.name}`,
       html: `<p><strong>${campaign.name}</strong> detected — confidence ${campaign.confidence.toFixed(0)}%.</p>
         <p>Techniques: ${campaign.commonTechniques.join(", ")}</p>
-        <p>Review it in SIXSYNC.</p>`,
+        <p>Review it in CyberChain.</p>`,
     });
     await recordAudit({
       action: AUDIT_ACTIONS.ALERT_EMAIL_SENT,
