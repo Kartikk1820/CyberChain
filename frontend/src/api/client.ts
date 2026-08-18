@@ -1,6 +1,7 @@
 import type {
   AccessAttempt,
   Campaign,
+  CampaignDetail,
   ConfirmationType,
   Organization,
   SecurityPolicyRules,
@@ -71,14 +72,35 @@ export function simulateTampering(reportId: string, token: string) {
   return request<{ tampered: boolean; message: string }>(`/reports/${reportId}/simulate-tampering`, { method: "POST" }, token);
 }
 
+export interface ThreatFeedItem {
+  id: string;
+  indicator: string;
+  indicatorType: string;
+  attackType: string;
+  mitreTechnique: string;
+  severity: string;
+  status: string;
+  confidence: number;
+  reporterOrgName: string;
+  createdAt: string;
+  resolvedIp: string | null;
+  geoLat: number | null;
+  geoLon: number | null;
+  geoCountry: string | null;
+  geoCity: string | null;
+  abuseScore: number | null;
+}
+
 export function getThreatFeed() {
-  return request<Array<{ id: string; indicator: string; indicatorType: string; attackType: string; mitreTechnique: string; severity: string; status: string; confidence: number; reporterOrgName: string; createdAt: string }>>(
-    "/threat-feed"
-  );
+  return request<ThreatFeedItem[]>("/threat-feed");
 }
 
 export function getCampaigns() {
   return request<Campaign[]>("/campaigns");
+}
+
+export function getCampaignDetail(id: string) {
+  return request<CampaignDetail>(`/campaigns/${id}`);
 }
 
 export function postAccessAttempt(

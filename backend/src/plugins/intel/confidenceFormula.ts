@@ -41,11 +41,30 @@ export interface ConfidenceInputs {
   currentStatus: ReportStatus;
 }
 
+export const CONFIDENCE_WEIGHTS = {
+  reputation: 0.25,
+  evidence: 0.15,
+  aiConfidence: 0.15,
+  confirmation: 0.3,
+  freshness: 0.15,
+};
+
+export interface ConfidenceBreakdown {
+  reporterReputation: number;
+  evidenceScore: number;
+  aiConfidence: number;
+  freshness: number;
+  confirmationScore: number;
+  disputePenalty: number;
+  weights: typeof CONFIDENCE_WEIGHTS;
+}
+
 export interface ConfidenceComputation {
   score: number;
   status: ReportStatus;
   distinctConfirmers: number;
   confirmationNet: number;
+  breakdown: ConfidenceBreakdown;
 }
 
 export function computeConfidence(inputs: ConfidenceInputs): ConfidenceComputation {
@@ -62,7 +81,13 @@ export function computeConfidence(inputs: ConfidenceInputs): ConfidenceComputati
   const confirmationScore = 100 * (1 - Math.exp(-0.4 * Math.max(confirmationNet, 0)));
   const disputePenalty = 60 * (1 - Math.exp(-0.4 * Math.max(-confirmationNet, 0)));
 
-  const rawScore = 0.25 * R + 0.15 * E + 0.15 * A + 0.3 * confirmationScore + 0.15 * F - disputePenalty;
+  const rawScore =
+    CONFIDENCE_WEIGHTS.reputation * R +
+    CONFIDENCE_WEIGHTS.evidence * E +
+    CONFIDENCE_WEIGHTS.aiConfidence * A +
+    CONFIDENCE_WEIGHTS.confirmation * confirmationScore +
+    CONFIDENCE_WEIGHTS.freshness * F -
+    disputePenalty;
   const score = clamp(rawScore, 0, 100);
 
   const distinctConfirmers = new Set(
@@ -81,5 +106,11 @@ export function computeConfidence(inputs: ConfidenceInputs): ConfidenceComputati
     status = "DISPUTED";
   }
 
-  return { score, status, distinctConfirmers, confirmationNet };
+  return {
+    score,
+    status,
+    distinctConfirmers,
+    confirmationNet,
+    breakdown: { reporterReputation: R, evidenceScore: E, aiConfidence: A, freshness: F, confirmationScore, disputePenalty, weights: CONFIDENCE_WEIGHTS },
+  };
 }

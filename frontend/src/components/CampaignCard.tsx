@@ -1,8 +1,12 @@
+import { Link } from "react-router-dom";
 import type { Campaign } from "@sixsync/shared";
 
 export function CampaignCard({ campaign }: { campaign: Campaign }) {
   return (
-    <div className="rounded-lg border border-purple-500/30 bg-purple-500/5 p-4">
+    <Link
+      to={`/campaigns/${campaign.id}`}
+      className="block rounded-lg border border-purple-500/30 bg-purple-500/5 p-4 hover:border-purple-500/50 transition-colors"
+    >
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-semibold text-purple-300">⚠ {campaign.name}</h3>
         <span className="text-xs text-purple-400">{campaign.confidence.toFixed(0)}% confidence</span>
@@ -17,6 +21,6 @@ export function CampaignCard({ campaign }: { campaign: Campaign }) {
       <p className="text-xs text-slate-400">
         {campaign.indicatorCount ?? 0} indicators · {campaign.orgCount ?? 0} orgs · detected {new Date(campaign.detectedAt).toLocaleString()}
       </p>
-    </div>
+    </Link>
   );
 }

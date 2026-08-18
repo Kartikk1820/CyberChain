@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import type { ThreatReport, Confirmation } from "@sixsync/shared";
+import type { ThreatReport, ScoreBreakdown } from "@sixsync/shared";
 import { confirmReport, getReportDetail, simulateTampering } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useWsEvents } from "../api/useWsEvents";
@@ -9,7 +9,6 @@ import { ConfidenceMeter } from "../components/ConfidenceMeter";
 type ReportDetail = ThreatReport & {
   evidenceIntegrity: boolean | null;
   blockchainVerified: boolean;
-  confirmations?: Confirmation[];
 };
 
 function Badge({ ok, label }: { ok: boolean | null; label: string }) {
@@ -22,6 +21,88 @@ function Badge({ ok, label }: { ok: boolean | null; label: string }) {
     >
       {ok ? "✓" : "✗"} {label}
     </span>
+  );
+}
+
+const BREAKDOWN_ROWS: Array<{
+  key: keyof Pick<ScoreBreakdown, "reporterReputation" | "evidenceScore" | "aiConfidence" | "confirmationScore" | "freshness">;
+  label: string;
+  weightKey: keyof ScoreBreakdown["weights"];
+  color: string;
+}> = [
+  { key: "reporterReputation", label: "Reporter reputation", weightKey: "reputation", color: "bg-sky-500" },
+  { key: "evidenceScore", label: "Evidence quality", weightKey: "evidence", color: "bg-emerald-500" },
+  { key: "aiConfidence", label: "AI / rule-based confidence", weightKey: "aiConfidence", color: "bg-amber-500" },
+  { key: "confirmationScore", label: "Network confirmations", weightKey: "confirmation", color: "bg-purple-500" },
+  { key: "freshness", label: "Freshness", weightKey: "freshness", color: "bg-slate-400" },
+];
+
+function ScoreBreakdownPanel({ breakdown }: { breakdown: ScoreBreakdown }) {
+  return (
+    <div className="rounded-lg border border-slate-800 bg-slate-900/50 p-4 space-y-3">
+      <h2 className="text-sm font-semibold text-slate-200">How this score was calculated</h2>
+      <div className="space-y-2">
+        {BREAKDOWN_ROWS.map((row) => {
+          const raw = breakdown[row.key];
+          const weight = breakdown.weights[row.weightKey];
+          const contribution = raw * weight;
+          return (
+            <div key={row.key}>
+              <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
+                <span>
+                  {row.label} <span className="text-slate-600">({(weight * 100).toFixed(0)}% weight)</span>
+                </span>
+                <span className="text-slate-300">
+                  {raw.toFixed(1)} → +{contribution.toFixed(1)}
+                </span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                <div className={`h-full ${row.color}`} style={{ width: `${Math.min(100, raw)}%` }} />
+              </div>
+            </div>
+          );
+        })}
+        {breakdown.disputePenalty > 0 && (
+          <div>
+            <div className="flex items-center justify-between text-xs text-red-400 mb-1">
+              <span>Dispute penalty</span>
+              <span>−{breakdown.disputePenalty.toFixed(1)}</span>
+            </div>
+            <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+              <div className="h-full bg-red-500" style={{ width: `${Math.min(100, breakdown.disputePenalty)}%` }} />
+            </div>
+          </div>
+        )}
+      </div>
+      <p className="text-[11px] text-slate-500">
+        score = 25% reputation + 15% evidence + 15% AI confidence + 30% confirmations + 15% freshness − dispute penalty
+      </p>
+    </div>
+  );
+}
+
+function ConfirmationHistory({ confirmations }: { confirmations: NonNullable<ThreatReport["confirmations"]> }) {
+  if (confirmations.length === 0) {
+    return <p className="text-sm text-slate-500">No other organization has confirmed or disputed this report yet.</p>;
+  }
+  return (
+    <div className="space-y-2">
+      {confirmations.map((c) => (
+        <div key={c.id} className="flex items-start justify-between rounded-lg border border-slate-800 bg-slate-900/50 px-3 py-2">
+          <div>
+            <p className="text-sm">
+              <span className="text-slate-200">{c.confirmingOrgName}</span>{" "}
+              <span className={c.type === "CONFIRM" ? "text-emerald-400" : "text-red-400"}>
+                {c.type === "CONFIRM" ? "confirmed" : "disputed"}
+              </span>{" "}
+              this report
+            </p>
+            {c.evidenceNote && <p className="text-xs text-slate-500 mt-0.5">"{c.evidenceNote}"</p>}
+          </div>
+          <span className="text-xs text-slate-500 whitespace-nowrap ml-3">{new Date(c.createdAt).toLocaleString()}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -122,6 +203,13 @@ export function ThreatFeedDetail() {
         {report.blockchainBlockId !== null && (
           <p className="text-xs text-slate-500">Ledger block #{report.blockchainBlockId} · payload hash {report.payloadHash.slice(0, 16)}…</p>
         )}
+      </div>
+
+      {report.scoreBreakdown && <ScoreBreakdownPanel breakdown={report.scoreBreakdown} />}
+
+      <div className="space-y-2">
+        <h2 className="text-sm font-semibold text-slate-200">Confirmation history</h2>
+        <ConfirmationHistory confirmations={report.confirmations ?? []} />
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}

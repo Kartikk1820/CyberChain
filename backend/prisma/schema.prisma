@@ -112,6 +112,12 @@ model ThreatReport {
   status            ReportStatus  @default(REPORTED)
   blockchainBlockId Int?
   payloadHash       String
+  resolvedIp        String?
+  geoLat            Float?
+  geoLon            Float?
+  geoCountry        String?
+  geoCity           String?
+  abuseScore        Int?
   createdAt         DateTime      @default(now())
 
   reporter           Organization        @relation("Reporter", fields: [reporterOrgId], references: [id])
@@ -124,6 +130,7 @@ model ThreatReport {
   @@index([mitreTechnique])
   @@index([status])
   @@index([createdAt])
+  @@index([resolvedIp])
 }
 
 model Confirmation {

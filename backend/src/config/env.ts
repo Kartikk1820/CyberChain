@@ -11,6 +11,11 @@ const envSchema = z.object({
     .default("false")
     .transform((v) => v === "true"),
   ANTHROPIC_API_KEY: z.string().optional(),
+  ENABLE_TI_ENRICHMENT: z
+    .string()
+    .default("false")
+    .transform((v) => v === "true"),
+  ABUSEIPDB_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);
