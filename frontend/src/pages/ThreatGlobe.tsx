@@ -92,12 +92,12 @@ export function ThreatGlobe() {
     <div className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold">Threat Globe</h2>
-        <p className="text-xs text-slate-500">Live geographic view of confirmed/critical threat indicators.</p>
+        <p className="text-xs text-muted-foreground">Live geographic view of confirmed/critical threat indicators.</p>
       </div>
-      <div ref={containerRef} className="rounded-lg border border-slate-800 bg-slate-900/50 p-2 overflow-hidden">
-        {loading && <p className="text-slate-500 text-sm p-4">Loading…</p>}
+      <div ref={containerRef} className="rounded-lg border border-border bg-card/60 p-2 overflow-hidden">
+        {loading && <p className="text-muted-foreground text-sm p-4">Loading…</p>}
         {!loading && points.length === 0 && (
-          <p className="text-slate-500 text-sm p-4">No geolocated threats yet — reports need a resolvable IP and threat-intel enrichment enabled.</p>
+          <p className="text-muted-foreground text-sm p-4">No geolocated threats yet — reports need a resolvable IP and threat-intel enrichment enabled.</p>
         )}
         {!loading && points.length > 0 && (
           <Globe
@@ -115,7 +115,7 @@ export function ThreatGlobe() {
             pointAltitude={0.01}
             pointLabel={(d) => {
               const p = d as GeoPoint;
-              return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:6px;padding:6px 8px;font-size:12px;color:#e2e8f0">
+              return `<div style="background:#0a0e1a;border:1px solid #1d2333;border-radius:8px;padding:6px 8px;font-size:12px;color:#e2e8f0">
                 <strong>${p.indicator}</strong> (${p.indicatorType})<br/>
                 ${p.geoCity ? `${p.geoCity}, ` : ""}${p.geoCountry ?? "unknown location"}<br/>
                 abuse score: ${p.abuseScore ?? "n/a"} · reported by ${p.reporterOrgName}

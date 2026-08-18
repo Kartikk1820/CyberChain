@@ -28,13 +28,13 @@ export function RiskBreakdown({ breakdown, decision, policyApplied }: { breakdow
           const value = breakdown[row.key];
           return (
             <div key={row.key}>
-              <div className="flex items-center justify-between text-xs text-slate-400 mb-0.5">
-                <span>{row.label} <span className="text-slate-600">({row.weight})</span></span>
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-0.5">
+                <span>{row.label} <span className="text-muted-foreground/70">({row.weight})</span></span>
                 <span>{value.toFixed(0)}</span>
               </div>
-              <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+              <div className="h-1.5 w-full rounded-full bg-secondary overflow-hidden">
                 <div
-                  className={`h-full ${value >= 75 ? "bg-red-500" : value >= 40 ? "bg-amber-500" : "bg-sky-500"}`}
+                  className={`h-full ${value >= 75 ? "bg-red-500" : value >= 40 ? "bg-amber-500" : "bg-primary"}`}
                   style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
                 />
               </div>
@@ -42,11 +42,11 @@ export function RiskBreakdown({ breakdown, decision, policyApplied }: { breakdow
           );
         })}
       </div>
-      <div className="flex items-center justify-between text-sm font-medium text-slate-200 pt-1 border-t border-slate-800">
+      <div className="flex items-center justify-between text-sm font-medium text-foreground pt-1 border-t border-border">
         <span>Total Risk Score</span>
         <span>{breakdown.totalRiskScore.toFixed(1)}</span>
       </div>
-      {policyApplied && <p className="text-xs text-slate-500">Policy: {policyApplied}</p>}
+      {policyApplied && <p className="text-xs text-muted-foreground">Policy: {policyApplied}</p>}
     </div>
   );
 }

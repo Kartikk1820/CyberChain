@@ -1,26 +1,36 @@
 import { Link } from "react-router-dom";
+import { TriangleAlert } from "lucide-react";
 import type { Campaign } from "@sixsync/shared";
+import { Card, CardContent, CardHeader } from "./ui/card";
+import { Badge } from "./ui/badge";
 
 export function CampaignCard({ campaign }: { campaign: Campaign }) {
   return (
-    <Link
-      to={`/campaigns/${campaign.id}`}
-      className="block rounded-lg border border-purple-500/30 bg-purple-500/5 p-4 hover:border-purple-500/50 transition-colors"
-    >
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-purple-300">⚠ {campaign.name}</h3>
-        <span className="text-xs text-purple-400">{campaign.confidence.toFixed(0)}% confidence</span>
-      </div>
-      <div className="flex flex-wrap gap-1 mb-2">
-        {campaign.commonTechniques.map((t) => (
-          <span key={t} className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[11px] text-purple-200">
-            {t}
-          </span>
-        ))}
-      </div>
-      <p className="text-xs text-slate-400">
-        {campaign.indicatorCount ?? 0} indicators · {campaign.orgCount ?? 0} orgs · detected {new Date(campaign.detectedAt).toLocaleString()}
-      </p>
+    <Link to={`/campaigns/${campaign.id}`} className="block">
+      <Card className="border-accent/30 bg-accent/5 hover:border-accent/50 hover:shadow-[0_0_20px_-8px_hsl(var(--accent)/0.5)] transition-all">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold text-accent">
+              <TriangleAlert className="h-3.5 w-3.5 shrink-0" />
+              {campaign.name}
+            </h3>
+            <span className="text-xs text-accent/80 shrink-0">{campaign.confidence.toFixed(0)}%</span>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0 space-y-2">
+          <div className="flex flex-wrap gap-1">
+            {campaign.commonTechniques.map((t) => (
+              <Badge key={t} variant="accent">
+                {t}
+              </Badge>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {campaign.indicatorCount ?? 0} indicators · {campaign.orgCount ?? 0} orgs · detected{" "}
+            {new Date(campaign.detectedAt).toLocaleString()}
+          </p>
+        </CardContent>
+      </Card>
     </Link>
   );
 }
